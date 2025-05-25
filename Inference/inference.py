@@ -9,7 +9,7 @@ model = WhisperForConditionalGeneration.from_pretrained(model_id)
 model.eval()
 
 # Tải và chuẩn hóa âm thanh (mono, 16kHz)
-audio_path = "/content/drive/MyDrive/ASR music vi/data_cleaned/717blSmq7s8_16k/717blSmq7s8_16k_6.wav"
+audio_path = "/content/drive/MyDrive/ASR music vi/downloads/0HZ9UO7pLfo_16k.wav"
 waveform, sr = torchaudio.load(audio_path)
 if sr != 16000:
     resampler = torchaudio.transforms.Resample(sr, 16000)
@@ -19,17 +19,30 @@ if sr != 16000:
 if waveform.shape[0] > 1:
     waveform = waveform[0:1, :]
 
-# Tiền xử lý
-inputs = processor(waveform.squeeze().numpy(), sampling_rate=16000, return_tensors="pt")
+# Các thông số chia đoạn
+segment_length_sec = 30  # 30 giây
+segment_samples = segment_length_sec * 16000
+total_samples = waveform.shape[1]
+segments = []
 
-# Inference với beam search
-with torch.no_grad():
-    predicted_ids = model.generate(
-        inputs["input_features"],
-        num_beams=5,
-        length_penalty=1.0
-    )
+# Chia waveform thành các đoạn 30s
+for start in range(0, total_samples, segment_samples):
+    end = min(start + segment_samples, total_samples)
+    segment = waveform[:, start:end]
+    segments.append(segment)
 
-# Giải mã
-transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-print(transcription)
+# Nhận diện từng đoạn và ghép lại
+final_transcript = ""
+for i, segment in enumerate(segments):
+    # Nếu đoạn cuối ngắn hơn 30s, không padding cũng được
+    inputs = processor(segment.squeeze().numpy(), sampling_rate=16000, return_tensors="pt")
+    with torch.no_grad():
+        predicted_ids = model.generate(
+            inputs["input_features"],
+            num_beams=5,
+            length_penalty=1.0
+        )
+    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+    final_transcript += f"{transcription} "  # hoặc thêm dấu xuống dòng nếu muốn
+
+print(final_transcript.strip())
