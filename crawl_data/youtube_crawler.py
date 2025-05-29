@@ -1,3 +1,12 @@
+import yt_dlp
+import ffmpeg
+import os
+import json
+
+# Tạo thư mục lưu audio và manifest
+os.makedirs("/content/drive/MyDrive/ASR music vi", exist_ok=True)
+manifest_path = "/content/drive/MyDrive/ASR music vi/train.jsonl"
+
 def download_and_convert_audio(youtube_url, out_dir="/content/drive/MyDrive/ASR music vi/downloads"):
     os.makedirs(out_dir, exist_ok=True)
 
